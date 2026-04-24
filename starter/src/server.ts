@@ -1,6 +1,7 @@
 import express from "express";
 import type { Request, Response } from "express";
 import { listTrials, getTrialById } from "./services/trial-service.js";
+import { getTrialSummary } from "./services/analysis-service.js";
 
 const app = express();
 app.use(express.json());
@@ -29,6 +30,15 @@ app.get("/trials/:id", (req: Request<{ id: string }>, res: Response) => {
     return;
   }
   res.json(trial);
+});
+
+app.get("/trials/:id/summary", (req: Request<{ id: string }>, res: Response) => {
+  const trial = getTrialById(req.params.id);
+  if (!trial) {
+    res.status(404).json({ error: "Trial not found" });
+    return;
+  }
+  res.json(getTrialSummary(trial));
 });
 
 app.get("/health", (_req, res) => {
