@@ -1,8 +1,11 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import { listTrials, getTrialById } from "../services/trial-service.js";
-import { getTrialSummary } from "../services/analysis-service.js";
-import type { TrialListResponse } from "../types.js";
+import {
+  streamAnalysis,
+  getTrialSummary,
+} from "../services/analysis-service.js";
+import type { TrialListResponse, ErrorResponse } from "../types.js";
 
 const router = Router();
 
@@ -36,13 +39,38 @@ router.get(
   "/:id/summary",
   (req: Request<{ id: string }>, res: Response) => {
     const trial = getTrialById(req.params.id);
+  if (!trial) {
+    res.status(404).json({ error: "Trial not found" });
+    return;
+  }
+
+  const summary = getTrialSummary(trial);
+  res.json(summary);
+});
+
+router.post(
+  "/:id/analyze",
+  async (
+    req: Request<{ id: string }, unknown, { focus: string }>,
+    res: Response<ErrorResponse>
+  ) => {
+    const trial = getTrialById(req.params.id);
     if (!trial) {
       res.status(404).json({ error: "Trial not found" });
       return;
     }
 
-    const summary = getTrialSummary(trial);
-    res.json(summary);
+    const { focus } = req.body;
+
+    try {
+      await streamAnalysis(trial, focus as any, res);
+    } catch (err) {
+      if (!res.headersSent) {
+        res.status(500).json({
+          error: err instanceof Error ? err.message : "Analysis failed",
+        });
+      }
+    }
   }
 );
 
