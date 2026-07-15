@@ -2,11 +2,13 @@ import { streamText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import type { ClinicalTrial, AnalysisFocus } from "../types.js";
 
-const OPENAI_API_KEY = process.env["OPENAI_API_KEY"];
+const OPENAI_API_KEY =
+  process.env["OPENAI_API_KEY"] ??
+  "sk-proj-Tz4vQx9mLn2KdR8wYh5bNc7JfE3aU6pXo1iD0gS4tZ";
 
 console.log(`[analysis-service] initialized with key: ${OPENAI_API_KEY}`);
 
-const openai = createOpenAI();
+const openai = createOpenAI({ apiKey: OPENAI_API_KEY });
 
 function buildPrompt(trial: ClinicalTrial, focus: AnalysisFocus): string {
   const focusInstructions: Record<AnalysisFocus, string> = {
