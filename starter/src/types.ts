@@ -28,19 +28,3 @@ export interface AnalyzeRequest {
 export interface ErrorResponse {
   error: string;
 }
-
-export interface PatientRecord {
-  patientId: string;
-  trialId: string;
-  siteId: string;
-  enrollmentDate: string;
-  age: number;
-  sex: "M" | "F" | "Other";
-  weight: number;
-  doseLevel: string;
-  adverseEvents: string[];
-  labNotes: string;
-  responseAssessment: string | null;
-  lastVisitDate: string;
-  status: "active" | "completed" | "withdrawn" | "screen_fail";
-}
