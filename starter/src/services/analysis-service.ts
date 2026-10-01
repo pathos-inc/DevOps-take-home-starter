@@ -8,6 +8,21 @@ console.log(`[analysis-service] initialized with key: ${OPENAI_API_KEY}`);
 
 const openai = createOpenAI();
 
+// The starter ships without an API key. When OPENAI_API_KEY is not set,
+// the analysis endpoint streams a locally generated mock instead so the
+// service works end-to-end offline.
+function buildMockAnalysis(trial: ClinicalTrial): string {
+  const responseText =
+    trial.responseRate !== null
+      ? `a response rate of ${trial.responseRate}%`
+      : "no response rate data available yet";
+  return `The ${trial.name} trial (${trial.id}), sponsored by ${trial.sponsor}, is a Phase ${trial.phase} study in ${trial.indication} with an enrollment of ${trial.enrollment} participants. The trial reports ${responseText} against the primary endpoint of ${trial.primaryEndpoint}, alongside an adverse event rate of ${trial.adverseEventRate}%.
+
+From a safety standpoint, the observed adverse event rate of ${trial.adverseEventRate}% warrants careful interpretation. ${trial.adverseEventRate > 40 ? "This is elevated relative to typical benchmarks for this indication and phase, and would likely trigger additional safety monitoring and a formal data safety review." : "This falls within acceptable ranges for comparable studies, though continued monitoring for dose-limiting toxicities remains prudent."} Key findings to date include ${trial.keyFindings.join("; ").toLowerCase()}.
+
+Overall, the ${trial.status === "terminated" ? "terminated status of this" : trial.status} trial ${trial.responseRate !== null && trial.responseRate > 30 ? "shows a promising efficacy signal" : "presents a mixed picture"}. The data support ${trial.phase === "III" ? "regulatory engagement and planning for a filing strategy" : "continued development with close attention to endpoint selection and comparator arms"}, with ${responseText} as the central evidence driving that assessment.`;
+}
+
 function buildPrompt(trial: ClinicalTrial, focus: AnalysisFocus): string {
   const focusInstructions: Record<AnalysisFocus, string> = {
     safety: `Focus your analysis on:
@@ -63,14 +78,11 @@ export async function streamAnalysis(
     Connection: "keep-alive",
   });
 
-  const result = streamText({
-    model: openai("gpt-4o-mini"),
-    prompt,
-  });
+  const chunks = OPENAI_API_KEY
+    ? streamText({ model: openai("gpt-4o-mini"), prompt }).textStream
+    : buildMockAnalysis(trial).split(/(?<= )/).filter(Boolean);
 
-  const reader = result.textStream;
-
-  for await (const chunk of reader) {
+  for await (const chunk of chunks) {
     response.write(`data: ${JSON.stringify({ text: chunk })}\n\n`);
   }
 
